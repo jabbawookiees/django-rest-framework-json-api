@@ -105,33 +105,69 @@ class JSONParser(parsers.JSONParser):
 
         request = parser_context.get('request')
 
-        # Check for inconsistencies
-        if request.method in ('PUT', 'POST', 'PATCH'):
-            resource_name = utils.get_resource_name(
-                parser_context, expand_polymorphic_types=True)
-            if isinstance(resource_name, six.string_types):
-                if data.get('type') != resource_name:
-                    raise exceptions.Conflict(
-                        "The resource object's type ({data_type}) is not the type that "
-                        "constitute the collection represented by the endpoint "
-                        "({resource_type}).".format(
-                            data_type=data.get('type'),
-                            resource_type=resource_name))
-            else:
-                if data.get('type') not in resource_name:
-                    raise exceptions.Conflict(
-                        "The resource object's type ({data_type}) is not the type that "
-                        "constitute the collection represented by the endpoint "
-                        "(one of [{resource_types}]).".format(
-                            data_type=data.get('type'),
-                            resource_types=", ".join(resource_name)))
-        if not data.get('id') and request.method in ('PATCH', 'PUT'):
-            raise ParseError("The resource identifier object must contain an 'id' member")
+        if isinstance(data, list):
+            # This section is a shim to allow JSON API to PUT/POST/PATCH multiple objects at once
+            # Check for inconsistencies
+            for obj in data:
+                if request.method in ('PUT', 'POST', 'PATCH'):
+                    resource_name = utils.get_resource_name(
+                        parser_context, expand_polymorphic_types=True)
+                    if isinstance(resource_name, six.string_types):
+                        if obj.get('type') != resource_name:
+                            raise exceptions.Conflict(
+                                "The resource object's type ({data_type}) is not the type that "
+                                "constitute the collection represented by the endpoint "
+                                "({resource_type}).".format(
+                                    data_type=obj.get('type'),
+                                    resource_type=resource_name))
+                    else:
+                        if obj.get('type') != resource_name:
+                            raise exceptions.Conflict(
+                                "The resource object's type ({data_type}) is not the type that "
+                                "constitute the collection represented by the endpoint "
+                                "(one of [{resource_types}]).".format(
+                                    data_type=obj.get('type'),
+                                    resource_types=", ".join(resource_name)))
+                if not obj.get('id') and request.method in ('PATCH', 'PUT'):
+                    raise ParseError("The resource identifier object must contain an 'id' member")
 
-        # Construct the return data
-        parsed_data = {'id': data.get('id')} if 'id' in data else {}
-        parsed_data['type'] = data.get('type')
-        parsed_data.update(self.parse_attributes(data))
-        parsed_data.update(self.parse_relationships(data))
-        parsed_data.update(self.parse_metadata(result))
-        return parsed_data
+            parsed_data = []
+            for obj in data:
+                parsed_object = {'id': obj.get('id')} if 'id' in obj else {}
+                parsed_object['type'] = obj.get('type')
+                parsed_object.update(self.parse_attributes(obj))
+                parsed_object.update(self.parse_relationships(obj))
+                parsed_object.update(self.parse_metadata(result))
+                parsed_data.append(parsed_object)
+            return parsed_data
+        else:
+            # Check for inconsistencies
+            if request.method in ('PUT', 'POST', 'PATCH'):
+                resource_name = utils.get_resource_name(
+                    parser_context, expand_polymorphic_types=True)
+                if isinstance(resource_name, six.string_types):
+                    if data.get('type') != resource_name:
+                        raise exceptions.Conflict(
+                            "The resource object's type ({data_type}) is not the type that "
+                            "constitute the collection represented by the endpoint "
+                            "({resource_type}).".format(
+                                data_type=data.get('type'),
+                                resource_type=resource_name))
+                else:
+                    if data.get('type') != resource_name:
+                        raise exceptions.Conflict(
+                            "The resource object's type ({data_type}) is not the type that "
+                            "constitute the collection represented by the endpoint "
+                            "(one of [{resource_types}]).".format(
+                                data_type=data.get('type'),
+                                resource_types=", ".join(resource_name)))
+            if not data.get('id') and request.method in ('PATCH', 'PUT'):
+                raise ParseError("The resource identifier object must contain an 'id' member")
+
+            # Construct the return data
+            parsed_data = {'id': data.get('id')} if 'id' in data else {}
+            parsed_data['type'] = data.get('type')
+            parsed_data.update(self.parse_attributes(data))
+            parsed_data.update(self.parse_relationships(data))
+            parsed_data.update(self.parse_metadata(result))
+            return parsed_data
