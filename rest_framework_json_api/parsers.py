@@ -128,9 +128,6 @@ class JSONParser(parsers.JSONParser):
                                 "(one of [{resource_types}]).".format(
                                     data_type=obj.get('type'),
                                     resource_types=", ".join(resource_name)))
-                if not obj.get('id') and request.method in ('PATCH', 'PUT'):
-                    raise ParseError("The resource identifier object must contain an 'id' member")
-
             parsed_data = []
             for obj in data:
                 parsed_object = {'id': obj.get('id')} if 'id' in obj else {}
@@ -161,9 +158,6 @@ class JSONParser(parsers.JSONParser):
                             "(one of [{resource_types}]).".format(
                                 data_type=data.get('type'),
                                 resource_types=", ".join(resource_name)))
-            if not data.get('id') and request.method in ('PATCH', 'PUT'):
-                raise ParseError("The resource identifier object must contain an 'id' member")
-
             # Construct the return data
             parsed_data = {'id': data.get('id')} if 'id' in data else {}
             parsed_data['type'] = data.get('type')
