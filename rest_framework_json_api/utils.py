@@ -16,6 +16,7 @@ from django.utils.module_loading import import_string as import_class_from_dotte
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import exceptions
 from rest_framework.exceptions import APIException
+from rest_framework.fields import ReadOnlyField
 
 try:
     from rest_framework.serializers import ManyRelatedField
@@ -99,7 +100,7 @@ def get_resource_name(context, expand_polymorphic_types=False):
     return resource_name
 
 
-def get_serializer_fields(serializer):
+def get_serializer_fields(serializer, serializer_resource=None):
     fields = None
     if hasattr(serializer, 'child'):
         fields = getattr(serializer.child, 'fields')
@@ -109,6 +110,13 @@ def get_serializer_fields(serializer):
         meta = getattr(serializer, 'Meta', None)
 
     if fields is not None:
+        if meta is not None and serializer_resource is not None:
+            allow_all_fields = getattr(meta, 'allow_all', False)
+            if allow_all_fields:
+                for key, value in serializer_resource.iteritems():
+                    if key not in fields:
+                        fields[key] = ReadOnlyField()
+
         meta_fields = getattr(meta, 'meta_fields', {})
         for field in meta_fields:
             try:
@@ -366,8 +374,8 @@ class Hyperlink(six.text_type):
     https://github.com/tomchristie/django-rest-framework
     """
 
-    def __new__(self, url, name):
-        ret = six.text_type.__new__(self, url)
+    def __new__(cls, url, name):
+        ret = six.text_type.__new__(cls, url)
         ret.name = name
         return ret
 

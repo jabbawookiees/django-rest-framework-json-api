@@ -378,7 +378,8 @@ class JSONRenderer(renderers.JSONRenderer):
                         serializer_fields = utils.get_serializer_fields(
                             serializer.__class__(
                                 nested_resource_instance, context=serializer.context
-                            )
+                            ),
+                            serializer_resource=serializer_resource
                         )
                         included_data.append(
                             cls.build_json_resource_obj(
@@ -403,7 +404,9 @@ class JSONRenderer(renderers.JSONRenderer):
                 relation_type = utils.get_resource_type_from_serializer(field)
 
                 # Get the serializer fields
-                serializer_fields = utils.get_serializer_fields(field)
+                serializer_fields = utils.get_serializer_fields(
+                    field, serializer_resource=serializer_data
+                )
                 if serializer_data:
                     included_data.append(
                         cls.build_json_resource_obj(
@@ -535,9 +538,6 @@ class JSONRenderer(renderers.JSONRenderer):
 
         if serializer is not None:
 
-            # Get the serializer fields
-            fields = utils.get_serializer_fields(serializer)
-
             # Determine if resource name must be resolved on each instance (polymorphic serializer)
             force_type_resolution = getattr(serializer, '_poly_force_type_resolution', False)
 
@@ -550,6 +550,11 @@ class JSONRenderer(renderers.JSONRenderer):
                 for position in range(len(serializer_data)):
                     resource = serializer_data[position]  # Get current resource
                     resource_instance = serializer.instance[position]  # Get current instance
+
+                    # Get the serializer fields
+                    fields = utils.get_serializer_fields(
+                        serializer, serializer_resource=resource
+                    )
 
                     json_resource_obj = self.build_json_resource_obj(
                         fields, resource, resource_instance, resource_name, force_type_resolution
@@ -565,6 +570,11 @@ class JSONRenderer(renderers.JSONRenderer):
                     if included:
                         json_api_included.extend(included)
             else:
+                # Get the serializer fields
+                fields = utils.get_serializer_fields(
+                    serializer, serializer_resource=serializer_data
+                )
+
                 resource_instance = serializer.instance
                 json_api_data = self.build_json_resource_obj(
                     fields, serializer_data, resource_instance, resource_name, force_type_resolution
