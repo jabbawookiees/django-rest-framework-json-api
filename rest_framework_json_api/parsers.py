@@ -30,6 +30,7 @@ class JSONParser(parsers.JSONParser):
     renderer_class = renderers.JSONRenderer
 
     @staticmethod
+
     def parse_attributes(data):
         attributes = data.get('attributes')
         uses_format_translation = getattr(settings, 'JSON_API_FORMAT_KEYS', False)
@@ -64,8 +65,12 @@ class JSONParser(parsers.JSONParser):
         return parsed_relationships
 
     @staticmethod
-    def parse_metadata(result):
-        metadata = result.get('meta')
+    def parse_metadata(result, obj=None):
+        if obj is None:
+            metadata = result.get('meta')
+        else:
+            metadata = result.get('meta').copy()
+            metadata.update(obj.get('meta', {}))
         if metadata:
             return {'_meta': metadata}
         else:
@@ -134,7 +139,7 @@ class JSONParser(parsers.JSONParser):
                 parsed_object['type'] = obj.get('type')
                 parsed_object.update(self.parse_attributes(obj))
                 parsed_object.update(self.parse_relationships(obj))
-                parsed_object.update(self.parse_metadata(result))
+                parsed_object.update(self.parse_metadata(result, obj))
                 parsed_data.append(parsed_object)
             return parsed_data
         else:
