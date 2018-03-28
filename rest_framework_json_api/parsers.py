@@ -69,7 +69,7 @@ class JSONParser(parsers.JSONParser):
         if obj is None:
             metadata = result.get('meta')
         else:
-            metadata = result.get('meta').copy()
+            metadata = result.get('meta', {}).copy()
             metadata.update(obj.get('meta', {}))
         if metadata:
             return {'_meta': metadata}
